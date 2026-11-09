@@ -40,8 +40,8 @@ O dashboard de controladoria foi desenhado para responder às principais dúvida
 ---
 
 ## 📊 Pré-visualização do Dashboard (Dark Mode)
-C:\repositorios\logistica_SQL\post1.png
-C:\repositorios\logistica_SQL\post2.png
+![logistics-controllership-mercosur](./post1.png)
+![logistics-controllership-mercosur](./post2.png)
 
 ---
 
