@@ -40,11 +40,12 @@ O dashboard de controladoria foi desenhado para responder às principais dúvida
 ---
 
 ## 📊 Pré-visualização do Dashboard (Dark Mode)
-*(Aqui você pode adicionar prints/screenshots da sua Torre de Controle finalizada, mostrando os cartões de KPI, o gráfico de barras das rotas, a rosca de importação/exportação e o detalhamento de custos).*
+C:\repositorios\logistica_SQL\post1.png
+C:\repositorios\logistica_SQL\post2.png
 
 ---
 
 ## 👨‍💻 Autor
 Verlã Acosta Ramos
 * *Especialista em Logística Internacional & Análise de Dados*
-* [Seu LinkedIn] | [Seu GitHub]
+* www.linkedin.com/in/verla-acosta-ramos | https://github.com/VerlaAcosta1973
