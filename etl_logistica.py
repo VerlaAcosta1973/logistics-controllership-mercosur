@@ -1,432 +1,417 @@
-from datetime import datetime, timedelta
+# -*- coding: utf-8 -*-
 import random
+from datetime import datetime, timedelta
 import pandas as pd
 from sqlalchemy import create_engine, text
 
-# Configuração da Conexão com o PostgreSQL 17
-USER = "postgres"
-PASSWORD = "fernanda020606"  # Substitua pela sua senha real do PostgreSQL
-HOST = "localhost"
-PORT = "5432"
-DB = "db_custos_logistica"
+# ==============================================================================
+# 1. CONEXÃO COM O POSTGRESQL 17
+# ==============================================================================
+# Atualizado com o nome exato do banco de dados: db_custos_logistica
+# (Substitua 'sua_senha_aqui' pela sua senha real do PostgreSQL)
+DB_URL = "postgresql+psycopg2://postgres:fernanda020606@localhost:5432/db_custos_logistica"
 
-engine = create_engine(
-    f"postgresql+psycopg2://{USER}:{PASSWORD}@{HOST}:{PORT}/{DB}"
-)
+engine = create_engine(DB_URL)
 
-print("A estabelecer conexão e a limpar tabelas com reset de IDs...")
 
-# Limpar dados e resetar sequências (IDs começam do 1)
-with engine.begin() as conn:
-  conn.execute(
-      text(
-          "TRUNCATE TABLE fato_viagens, dim_veiculo, dim_rota, dim_posto RESTART"
-          " IDENTITY CASCADE;"
-      )
+# ==============================================================================
+# 2. LIMPEZA IDEMPOTENTE DO BANCO DE DADOS
+# ==============================================================================
+def limpar_ambiente():
+  """Apaga as tabelas com CASCADE para garantir reset limpo sem erros de Foreign Key."""
+  with engine.begin() as conn:
+    print("🧹 Limpando tabelas existentes no banco 'db_custos_logistica'...")
+    conn.execute(text("DROP TABLE IF EXISTS fato_viagens CASCADE;"))
+    conn.execute(text("DROP TABLE IF EXISTS dim_rota CASCADE;"))
+    conn.execute(text("DROP TABLE IF EXISTS dim_veiculo CASCADE;"))
+    conn.execute(text("DROP TABLE IF EXISTS dim_posto CASCADE;"))
+    print("✅ Ambiente limpo com sucesso! Estrutura pronta para ser criada.")
+
+
+# ==============================================================================
+# 3. DIMENSÃO ROTAS (Mercosul - Exportação e Importação / Backhaul)
+# ==============================================================================
+def gerar_dim_rotas():
+  rotas = [
+      # --- EXPORTAÇÃO (Brasil ➔ Mercosul/Chile) ---
+      {
+          "id_rota": 1,
+          "pais_origem": "Brasil",
+          "cidade_origem": "Porto Alegre (RS)",
+          "pais_destino": "Chile",
+          "cidade_destino": "Antofagasta (AN)",
+          "distancia_km": 3600,
+          "tipo_operacao": "Exportação",
+          "tempo_medio_espera_horas": 28.0,
+      },
+      {
+          "id_rota": 2,
+          "pais_origem": "Brasil",
+          "cidade_origem": "Curitiba (PR)",
+          "pais_destino": "Chile",
+          "cidade_destino": "Santiago (ST)",
+          "distancia_km": 3100,
+          "tipo_operacao": "Exportação",
+          "tempo_medio_espera_horas": 24.0,
+      },
+      {
+          "id_rota": 3,
+          "pais_origem": "Brasil",
+          "cidade_origem": "Belo Horizonte (MG)",
+          "pais_destino": "Argentina",
+          "cidade_destino": "Córdoba (CB)",
+          "distancia_km": 2850,
+          "tipo_operacao": "Exportação",
+          "tempo_medio_espera_horas": 16.0,
+      },
+      {
+          "id_rota": 4,
+          "pais_origem": "Brasil",
+          "cidade_origem": "Campinas (SP)",
+          "pais_destino": "Chile",
+          "cidade_destino": "Valparaíso (VP)",
+          "distancia_km": 3300,
+          "tipo_operacao": "Exportação",
+          "tempo_medio_espera_horas": 26.0,
+      },
+      {
+          "id_rota": 5,
+          "pais_origem": "Brasil",
+          "cidade_origem": "Florianópolis (SC)",
+          "pais_destino": "Argentina",
+          "cidade_destino": "Mendoza (MD)",
+          "distancia_km": 2400,
+          "tipo_operacao": "Exportação",
+          "tempo_medio_espera_horas": 18.0,
+      },
+      {
+          "id_rota": 6,
+          "pais_origem": "Brasil",
+          "cidade_origem": "São Paulo (SP)",
+          "pais_destino": "Argentina",
+          "cidade_destino": "Córdoba (CB)",
+          "distancia_km": 2400,
+          "tipo_operacao": "Exportação",
+          "tempo_medio_espera_horas": 18.0,
+      },
+      {
+          "id_rota": 7,
+          "pais_origem": "Brasil",
+          "cidade_origem": "São Paulo (SP)",
+          "pais_destino": "Argentina",
+          "cidade_destino": "Rosário (Santa Fe)",
+          "distancia_km": 2100,
+          "tipo_operacao": "Exportação",
+          "tempo_medio_espera_horas": 14.0,
+      },
+      {
+          "id_rota": 8,
+          "pais_origem": "Brasil",
+          "cidade_origem": "São Paulo (SP)",
+          "pais_destino": "Uruguai",
+          "cidade_destino": "Montevidéu (MV)",
+          "distancia_km": 1950,
+          "tipo_operacao": "Exportação",
+          "tempo_medio_espera_horas": 10.0,
+      },
+      {
+          "id_rota": 9,
+          "pais_origem": "Brasil",
+          "cidade_origem": "Joinville (SC)",
+          "pais_destino": "Argentina",
+          "cidade_destino": "Buenos Aires (BA)",
+          "distancia_km": 1650,
+          "tipo_operacao": "Exportação",
+          "tempo_medio_espera_horas": 12.0,
+      },
+      {
+          "id_rota": 10,
+          "pais_origem": "Brasil",
+          "cidade_origem": "Porto Alegre (RS)",
+          "pais_destino": "Uruguai",
+          "cidade_destino": "Montevidéu (MV)",
+          "distancia_km": 890,
+          "tipo_operacao": "Exportação",
+          "tempo_medio_espera_horas": 8.0,
+      },
+      {
+          "id_rota": 11,
+          "pais_origem": "Brasil",
+          "cidade_origem": "Uruguaiana (RS)",
+          "pais_destino": "Argentina",
+          "cidade_destino": "Buenos Aires (BA)",
+          "distancia_km": 720,
+          "tipo_operacao": "Exportação",
+          "tempo_medio_espera_horas": 10.0,
+      },
+      {
+          "id_rota": 12,
+          "pais_origem": "Brasil",
+          "cidade_origem": "Uruguaiana (RS)",
+          "pais_destino": "Uruguai",
+          "cidade_destino": "Rivera (RV)",
+          "distancia_km": 240,
+          "tipo_operacao": "Exportação",
+          "tempo_medio_espera_horas": 4.0,
+      },
+      # --- IMPORTAÇÃO / RETORNO (Mercosul/Chile ➔ Brasil - Backhaul) ---
+      {
+          "id_rota": 13,
+          "pais_origem": "Argentina",
+          "cidade_origem": "Buenos Aires (BA)",
+          "pais_destino": "Brasil",
+          "cidade_destino": "São Paulo (SP)",
+          "distancia_km": 2200,
+          "tipo_operacao": "Importação",
+          "tempo_medio_espera_horas": 12.0,
+      },
+      {
+          "id_rota": 14,
+          "pais_origem": "Chile",
+          "cidade_origem": "Santiago (ST)",
+          "pais_destino": "Brasil",
+          "cidade_destino": "Curitiba (PR)",
+          "distancia_km": 3100,
+          "tipo_operacao": "Importação",
+          "tempo_medio_espera_horas": 22.0,
+      },
+      {
+          "id_rota": 15,
+          "pais_origem": "Uruguai",
+          "cidade_origem": "Montevidéu (MV)",
+          "pais_destino": "Brasil",
+          "cidade_destino": "Porto Alegre (RS)",
+          "distancia_km": 890,
+          "tipo_operacao": "Importação",
+          "tempo_medio_espera_horas": 7.0,
+      },
+      {
+          "id_rota": 16,
+          "pais_origem": "Argentina",
+          "cidade_origem": "Córdoba (CB)",
+          "pais_destino": "Brasil",
+          "cidade_destino": "Campinas (SP)",
+          "distancia_km": 2300,
+          "tipo_operacao": "Importação",
+          "tempo_medio_espera_horas": 15.0,
+      },
+      {
+          "id_rota": 17,
+          "pais_origem": "Argentina",
+          "cidade_origem": "Mendoza (MD)",
+          "pais_destino": "Brasil",
+          "cidade_destino": "São Paulo (SP)",
+          "distancia_km": 2550,
+          "tipo_operacao": "Importação",
+          "tempo_medio_espera_horas": 17.0,
+      },
+  ]
+
+  df_rotas = pd.DataFrame(rotas)
+
+  df_rotas.to_sql("dim_rota", engine, if_exists="replace", index=False)
+  print("-> Tabela 'dim_rota' populada com sucesso.")
+  return df_rotas
+
+
+# ==============================================================================
+# 4. DIMENSÃO VEÍCULOS (Frota de 26 cavalos/carretas)
+# ==============================================================================
+def gerar_dim_veiculos():
+  veiculos = []
+  modelos = ["Volvo FH 540", "Scania R450", "DAF XF 530", "Mercedes-Benz Actros"]
+
+  for i in range(1, 27):
+    veiculos.append({
+        "id_veiculo": i,
+        "placa": f"ABC{i:04d}",
+        "modelo": random.choice(modelos),
+        "ano_fabricacao": random.randint(2019, 2024),
+        "capacidade_ton": 32.0,
+        "media_kml_alvo": round(random.uniform(2.1, 2.5), 2),
+    })
+
+  df_veiculos = pd.DataFrame(veiculos)
+  df_veiculos.to_sql("dim_veiculo", engine, if_exists="replace", index=False)
+  print("-> Tabela 'dim_veiculo' populada com sucesso.")
+  return df_veiculos
+
+
+# ==============================================================================
+# 5. DIMENSÃO POSTOS DE COMBUSTÍVEL (Mercosul)
+# ==============================================================================
+def gerar_dim_postos():
+  postos = [
+      {
+          "id_posto": 1,
+          "nome_posto": "Posto Marangon (Uruguaiana - BR)",
+          "pais": "Brasil",
+          "moeda": "BRL",
+          "preco_diesel_litro": 6.15,
+      },
+      {
+          "id_posto": 2,
+          "nome_posto": "YPF Paso de los Libres (AR)",
+          "pais": "Argentina",
+          "moeda": "ARS",
+          "preco_diesel_litro": 5.80,
+      },
+      {
+          "id_posto": 3,
+          "nome_posto": "Shell Uruguaiana (BR)",
+          "pais": "Brasil",
+          "moeda": "BRL",
+          "preco_diesel_litro": 6.20,
+      },
+      {
+          "id_posto": 4,
+          "nome_posto": "Ancap Bella Unión (UY)",
+          "pais": "Uruguai",
+          "moeda": "UYU",
+          "preco_diesel_litro": 7.10,
+      },
+      {
+          "id_posto": 5,
+          "nome_posto": "Copec Los Andes (CL)",
+          "pais": "Chile",
+          "moeda": "CLP",
+          "preco_diesel_litro": 6.50,
+      },
+  ]
+
+  df_postos = pd.DataFrame(postos)
+  df_postos.to_sql("dim_posto", engine, if_exists="replace", index=False)
+  print("-> Tabela 'dim_posto' populada com sucesso.")
+  return df_postos
+
+
+# ==============================================================================
+# 6. TABELA FATO DE VIAGENS (Cálculo Financeiro Operacional)
+# ==============================================================================
+# ==============================================================================
+# 6. TABELA FATO DE VIAGENS (Cálculo Financeiro Operacional)
+# ==============================================================================
+
+
+def gerar_fato_viagens(df_rotas, df_veiculos):
+  viagens = []
+  # Definindo o início há 3 anos (ex: 2023, 2024 e 2025)
+  data_inicial = datetime(2023, 1, 1)
+  total_dias_3_anos = 365 * 3  # Aproximadamente 1095 dias
+
+  for i in range(1, 1030):
+    rota = df_rotas.sample(1).iloc[0]
+    veiculo = df_veiculos.sample(1).iloc[0]
+
+    dias_viagem = max(1, int(rota["distancia_km"] / 600))
+    # Sorteia uma data distribuída ao longo dos 3 anos
+    data_saida = data_inicial + timedelta(
+        days=random.randint(0, total_dias_3_anos), hours=random.randint(6, 20)
+    )
+    data_chegada = data_saida + timedelta(
+        days=dias_viagem, hours=random.randint(2, 10)
+    )
+
+    # Tarifas por KM (Exportação vs Importação/Backhaul)
+    if rota["tipo_operacao"] == "Exportação":
+      tarifa_km = random.uniform(8.5, 11.0)
+    else:
+      tarifa_km = random.uniform(6.5, 9.0)
+
+    receita_bruta = round(rota["distancia_km"] * tarifa_km, 2)
+    impostos_retidos = round(receita_bruta * 0.04, 2)  # 4% de impostos retidos
+
+    # Consumo e custos operacionais variáveis
+    kml_real = round(
+        veiculo["media_kml_alvo"] + random.uniform(-0.25, 0.2), 2
+    )
+    litros_combustivel = round(rota["distancia_km"] / kml_real, 2)
+    custo_combustivel = round(
+        litros_combustivel * random.uniform(5.90, 6.60), 2
+    )
+
+    custo_pedagio = round(rota["distancia_km"] * random.uniform(0.70, 1.10), 2)
+    custo_diarias_motorista = round(dias_viagem * 250.0, 2)
+    custo_manutencao_prev = round(
+        rota["distancia_km"] * random.uniform(0.35, 0.55), 2
+    )
+    custo_manutencao_corretiva = round(
+        rota["distancia_km"] * random.uniform(0.20, 0.40), 2
+    )
+
+    custo_total_operacional = round(
+        custo_combustivel
+        + custo_pedagio
+        + custo_diarias_motorista
+        + custo_manutencao_prev
+        + custo_manutencao_corretiva,
+        2,
+    )
+
+    resultado_operacional_direto = round(
+        receita_bruta - custo_total_operacional, 2
+    )
+
+    viagens.append({
+        "data_saida": data_saida,
+        "data_chegada": data_chegada,
+        "id_veiculo": veiculo["id_veiculo"],
+        "id_rota": rota["id_rota"],
+        "km_percorrido": rota["distancia_km"],
+        "receita_bruta_total": receita_bruta,
+        "impostos_retidos": impostos_retidos,
+        "custo_combustivel": custo_combustivel,
+        "custo_pedagio": custo_pedagio,
+        "custo_diarias_motorista": custo_diarias_motorista,
+        "custo_manutencao_prev": custo_manutencao_prev,
+        "custo_manutencao_corretiva": custo_manutencao_corretiva,
+        "custo_total_operacional": custo_total_operacional,
+        "resultado_operacional_direto": resultado_operacional_direto,
+    })
+
+  # Converte para DataFrame
+  df_fato = pd.DataFrame(viagens)
+
+  # 1. ORDENAÇÃO CRONOLÓGICA: Do mais antigo para o mais recente
+  df_fato = df_fato.sort_values(by="data_saida").reset_index(drop=True)
+
+  # 2. ATRIBUIÇÃO DE ID SEQUENCIAL: Agora alinhado perfeitamente com a data
+  df_fato["id_viagem"] = range(1, len(df_fato) + 1)
+
+  # Reorganiza as colunas para o 'id_viagem' ficar na primeira posição
+  cols = ["id_viagem"] + [col for col in df_fato.columns if col != "id_viagem"]
+  df_fato = df_fato[cols]
+
+  # Grava no PostgreSQL
+  df_fato.to_sql("fato_viagens", engine, if_exists="replace", index=False)
+  print(
+      "-> Tabela 'fato_viagens' populada com 1.000 viagens ordenadas"
+      " cronologicamente (2023-2025)."
   )
 
-# 1. Dimensão Veículos (Frota de 26 Veículos - Foco em Volvo, Scania e Iveco)
-veiculos_data = [
-    {
-        "placa": "ABC-1234",
-        "modelo": "Volvo FH 540",
-        "ano": 2021,
-        "capacidade_toneladas": 30.0,
-    },
-    {
-        "placa": "DEF-5678",
-        "modelo": "Scania R450",
-        "ano": 2021,
-        "capacidade_toneladas": 28.5,
-    },
-    {
-        "placa": "GHI-9012",
-        "modelo": "Iveco S-Way",
-        "ano": 2023,
-        "capacidade_toneladas": 30.0,
-    },
-    {
-        "placa": "JKL-3456",
-        "modelo": "Volvo FH 460",
-        "ano": 2020,
-        "capacidade_toneladas": 27.0,
-    },
-    {
-        "placa": "MNO-7890",
-        "modelo": "Scania R500",
-        "ano": 2023,
-        "capacidade_toneladas": 32.0,
-    },
-    {
-        "placa": "PQR-2345",
-        "modelo": "Iveco Stralis",
-        "ano": 2019,
-        "capacidade_toneladas": 27.0,
-    },
-    {
-        "placa": "STU-6789",
-        "modelo": "Volvo FH 500",
-        "ano": 2021,
-        "capacidade_toneladas": 30.0,
-    },
-    {
-        "placa": "VWX-1239",
-        "modelo": "Scania R540",
-        "ano": 2022,
-        "capacidade_toneladas": 33.0,
-    },
-    {
-        "placa": "YZA-4567",
-        "modelo": "Volvo FH 540",
-        "ano": 2022,
-        "capacidade_toneladas": 30.0,
-    },
-    {
-        "placa": "BCD-8901",
-        "modelo": "Scania R450",
-        "ano": 2020,
-        "capacidade_toneladas": 28.5,
-    },
-    {
-        "placa": "EFG-3452",
-        "modelo": "Iveco S-Way",
-        "ano": 2024,
-        "capacidade_toneladas": 30.0,
-    },
-    {
-        "placa": "HIJ-6781",
-        "modelo": "Volvo FH 460",
-        "ano": 2023,
-        "capacidade_toneladas": 27.0,
-    },
-    {
-        "placa": "KLM-9013",
-        "modelo": "Scania R500",
-        "ano": 2020,
-        "capacidade_toneladas": 32.0,
-    },
-    {
-        "placa": "NOP-2346",
-        "modelo": "Iveco Stralis",
-        "ano": 2018,
-        "capacidade_toneladas": 26.5,
-    },
-    {
-        "placa": "QRS-5679",
-        "modelo": "Volvo FH 500",
-        "ano": 2022,
-        "capacidade_toneladas": 30.0,
-    },
-    {
-        "placa": "TUV-1122",
-        "modelo": "Scania R540",
-        "ano": 2023,
-        "capacidade_toneladas": 33.0,
-    },
-    {
-        "placa": "WXY-3344",
-        "modelo": "Volvo FH 540",
-        "ano": 2019,
-        "capacidade_toneladas": 30.0,
-    },
-    {
-        "placa": "ZAB-5566",
-        "modelo": "Iveco S-Way",
-        "ano": 2022,
-        "capacidade_toneladas": 30.0,
-    },
-    {
-        "placa": "CDE-7788",
-        "modelo": "Scania R450",
-        "ano": 2022,
-        "capacidade_toneladas": 28.5,
-    },
-    {
-        "placa": "FGH-9900",
-        "modelo": "Volvo FH 460",
-        "ano": 2021,
-        "capacidade_toneladas": 27.0,
-    },
-    {
-        "placa": "IJK-1212",
-        "modelo": "Scania R500",
-        "ano": 2021,
-        "capacidade_toneladas": 32.0,
-    },
-    {
-        "placa": "LMN-3434",
-        "modelo": "Iveco S-Way",
-        "ano": 2023,
-        "capacidade_toneladas": 30.0,
-    },
-    {
-        "placa": "OPQ-5656",
-        "modelo": "Volvo FH 500",
-        "ano": 2020,
-        "capacidade_toneladas": 30.0,
-    },
-    {
-        "placa": "RST-7878",
-        "modelo": "Scania R540",
-        "ano": 2024,
-        "capacidade_toneladas": 33.0,
-    },
-    {
-        "placa": "UVW-9090",
-        "modelo": "Volvo FH 540",
-        "ano": 2023,
-        "capacidade_toneladas": 30.0,
-    },
-    {
-        "placa": "XYZ-2468",
-        "modelo": "Iveco Stralis",
-        "ano": 2019,
-        "capacidade_toneladas": 27.0,
-    },
-]
-df_veiculos = pd.DataFrame(veiculos_data)
 
-# 2. Dimensão Rotas (Logística Internacional - Mercosul)
-rotas_data = [
-    {
-        "pais_origem": "Brasil",
-        "cidade_origem": "Uruguaiana (RS)",
-        "pais_destino": "Argentina",
-        "cidade_destino": "Buenos Aires (BA)",
-        "distancia_km": 800.0,
-        "tempo_medio_espera_fronteira_horas": 12.5,
-    },
-    {
-        "pais_origem": "Brasil",
-        "cidade_origem": "São Paulo (SP)",
-        "pais_destino": "Argentina",
-        "cidade_destino": "Córdoba (CB)",
-        "distancia_km": 2400.0,
-        "tempo_medio_espera_fronteira_horas": 18.0,
-    },
-    {
-        "pais_origem": "Brasil",
-        "cidade_origem": "Porto Alegre (RS)",
-        "pais_destino": "Uruguai",
-        "cidade_destino": "Montevidéu (MV)",
-        "distancia_km": 950.0,
-        "tempo_medio_espera_fronteira_horas": 8.0,
-    },
-    {
-        "pais_origem": "Brasil",
-        "cidade_origem": "Curitiba (PR)",
-        "pais_destino": "Chile",
-        "cidade_destino": "Santiago (ST)",
-        "distancia_km": 3100.0,
-        "tempo_medio_espera_fronteira_horas": 24.0,
-    },
-    {
-        "pais_origem": "Brasil",
-        "cidade_origem": "São Paulo (SP)",
-        "pais_destino": "Argentina",
-        "cidade_destino": "Rosário (Santa Fe)",
-        "distancia_km": 2100.0,
-        "tempo_medio_espera_fronteira_horas": 15.0,
-    },
-    {
-        "pais_origem": "Brasil",
-        "cidade_origem": "Florianópolis (SC)",
-        "pais_destino": "Argentina",
-        "cidade_destino": "Mendoza (MD)",
-        "distancia_km": 2850.0,
-        "tempo_medio_espera_fronteira_horas": 22.0,
-    },
-    {
-        "pais_origem": "Brasil",
-        "cidade_origem": "Campinas (SP)",
-        "pais_destino": "Chile",
-        "cidade_destino": "Valparaíso (VP)",
-        "distancia_km": 3150.0,
-        "tempo_medio_espera_fronteira_horas": 26.0,
-    },
-    {
-        "pais_origem": "Brasil",
-        "cidade_origem": "Uruguaiana (RS)",
-        "pais_destino": "Uruguai",
-        "cidade_destino": "Rivera (RV)",
-        "distancia_km": 420.0,
-        "tempo_medio_espera_fronteira_horas": 5.0,
-    },
-    {
-        "pais_origem": "Brasil",
-        "cidade_origem": "Joinville (SC)",
-        "pais_destino": "Argentina",
-        "cidade_destino": "Buenos Aires (BA)",
-        "distancia_km": 1250.0,
-        "tempo_medio_espera_fronteira_horas": 14.0,
-    },
-    {
-        "pais_origem": "Brasil",
-        "cidade_origem": "Belo Horizonte (MG)",
-        "pais_destino": "Argentina",
-        "cidade_destino": "Córdoba (CB)",
-        "distancia_km": 2980.0,
-        "tempo_medio_espera_fronteira_horas": 19.0,
-    },
-    {
-        "pais_origem": "Brasil",
-        "cidade_origem": "Porto Alegre (RS)",
-        "pais_destino": "Chile",
-        "cidade_destino": "Antofagasta (AN)",
-        "distancia_km": 2900.0,
-        "tempo_medio_espera_fronteira_horas": 28.0,
-    },
-    {
-        "pais_origem": "Brasil",
-        "cidade_origem": "São Paulo (SP)",
-        "pais_destino": "Uruguai",
-        "cidade_destino": "Montevidéu (MV)",
-        "distancia_km": 1900.0,
-        "tempo_medio_espera_fronteira_horas": 10.0,
-    },
-]
-df_rotas = pd.DataFrame(rotas_data)
 
-# 3. Dimensão Postos
-postos_data = [
-    {
-        "nome_posto": "Posto Fronteira Sul",
-        "localizacao": "Uruguaiana (BR)",
-        "pais": "Brasil",
-        "moeda": "BRL",
-        "preco_litro_diesel": 6.15,
-    },
-    {
-        "nome_posto": "YPF Paso de los Libres",
-        "localizacao": "Paso de los Libres (AR)",
-        "pais": "Argentina",
-        "moeda": "ARS",
-        "preco_litro_diesel": 980.00,
-    },
-    {
-        "nome_posto": "Ancap Ruta 5",
-        "localizacao": "Rivera (UY)",
-        "pais": "Uruguai",
-        "moeda": "UYU",
-        "preco_litro_diesel": 63.50,
-    },
-    {
-        "nome_posto": "Copec Internacional",
-        "localizacao": "Los Andes (CL)",
-        "pais": "Chile",
-        "moeda": "CLP",
-        "preco_litro_diesel": 1180.00,
-    },
-    {
-        "nome_posto": "YPF Autopista Córdoba",
-        "localizacao": "Córdoba (AR)",
-        "pais": "Argentina",
-        "moeda": "ARS",
-        "preco_litro_diesel": 1010.00,
-    },
-    {
-        "nome_posto": "Petrobras Uruguaiana",
-        "localizacao": "Uruguaiana (BR)",
-        "pais": "Brasil",
-        "moeda": "BRL",
-        "preco_litro_diesel": 6.08,
-    },
-]
-df_postos = pd.DataFrame(postos_data)
+# ==============================================================================
+# 7. EXECUÇÃO DO PIPELINE ETL
+# ==============================================================================
+if __name__ == "__main__":
+  print("=== INICIANDO PIPELINE ETL (db_custos_logistica) ===")
 
-# Tabela auxiliar de conversão do preço do litro para BRL por ID do posto
-precos_postos_brl = {1: 6.15, 2: 5.85, 3: 7.10, 4: 6.80, 5: 5.95, 6: 6.08}
+  # 1. Reseta o ambiente de forma segura
+  limpar_ambiente()
 
-# Inserindo Dimensões
-df_veiculos.to_sql("dim_veiculo", engine, if_exists="append", index=False)
-df_rotas.to_sql("dim_rota", engine, if_exists="append", index=False)
-df_postos.to_sql("dim_posto", engine, if_exists="append", index=False)
+  # 2. Gera e insere as dimensões
+  df_rotas = gerar_dim_rotas()
+  df_veiculos = gerar_dim_veiculos()
+  df_postos = gerar_dim_postos()
 
-id_veiculos = pd.read_sql("SELECT id_veiculo FROM dim_veiculo", engine)[
-    "id_veiculo"
-].tolist()
-id_rotas = pd.read_sql("SELECT id_rota FROM dim_rota", engine)[
-    "id_rota"
-].tolist()
-id_postos = pd.read_sql("SELECT id_posto FROM dim_posto", engine)[
-    "id_posto"
-].tolist()
+  # 3. Gera e insere a tabela fato
+  gerar_fato_viagens(df_rotas, df_veiculos)
 
-distancias_dict = pd.read_sql(
-    "SELECT id_rota, distancia_km FROM dim_rota", engine
-).set_index("id_rota")["distancia_km"].to_dict()
-
-# 4. Gerando Fato Viagens com Regras Refinadas
-random.seed(42)
-viagens_data = []
-data_inicio_base = datetime(2023, 1, 1)
-
-total_viagens = random.randint(2043, 2187)
-print(
-    f"A gerar {total_viagens} viagens simuladas (2023-2025) com custos de"
-    " combustível calculados..."
-)
-
-pesos_disponibilidade = [
-    random.uniform(0.3, 1.0) for _ in range(len(id_veiculos))
-]
-
-for _ in range(total_viagens):
-  id_v = random.choices(id_veiculos, weights=pesos_disponibilidade, k=1)[0]
-  id_r = random.choice(id_rotas)
-  id_p = random.choice(id_postos)
-
-  dias_aleatorios = random.randint(0, 1095)
-  data_saida = data_inicio_base + timedelta(days=dias_aleatorios)
-  duracao_viagem = random.randint(3, 15)
-  data_chegada = data_saida + timedelta(days=duracao_viagem)
-
-  distancia = distancias_dict[id_r]
-  fator_inflacao = 1.0 + ((data_saida.year - 2023) * 0.07)
-
-  # Receita Bruta do Frete
-  receita = round(
-      distancia * random.uniform(5.8, 9.2) * fator_inflacao, 2
+  print(
+      "\n🎉 PARABÉNS! Pipeline concluído com sucesso absoluto no PostgreSQL!"
   )
-
-  # Regra de Impostos: Percentual realista (8% a 15% da receita bruta)
-  percentual_imposto = random.uniform(0.08, 0.15)
-  impostos = round(receita * percentual_imposto, 2)
-
-  # Regra de Manutenção: 70% das viagens com 0 manutenção, 30% com custo esporádico
-  if random.random() < 0.30:
-    manutencao = round(
-        random.uniform(1200.0, 5800.0) * fator_inflacao, 2
-    )  # Manutenção preventiva/corretiva
-  else:
-    manutencao = 0.0
-
-  # Pedágios e Combustível (litros e custo total em reais)
-  pedagios = round(distancia * random.uniform(0.20, 0.32) * fator_inflacao, 2)
-  litros = round((distancia / 2.8) * random.uniform(0.95, 1.05), 2)
-
-  # Cálculo do custo total do combustível em BRL
-  preco_litro_brl = precos_postos_brl.get(id_p, 6.15)
-  custo_combustivel = round(litros * preco_litro_brl * fator_inflacao, 2)
-
-  viagens_data.append({
-      "id_veiculo": id_v,
-      "id_rota": id_r,
-      "id_posto": id_p,
-      "data_saida": data_saida.strftime("%Y-%m-%d"),
-      "data_chegada": data_chegada.strftime("%Y-%m-%d"),
-      "litros_diesel_consumidos": litros,
-      "custo_combustivel": custo_combustivel,  # Coluna nova de custo em valores
-      "custo_manutencao_corretiva": manutencao,
-      "pedagios_totais": pedagios,
-      "impostos_retidos": impostos,
-      "receita_bruta_frete": receita,
-  })
-
-df_viagens = pd.DataFrame(viagens_data)
-df_viagens.to_sql("fato_viagens", engine, if_exists="append", index=False)
-
-print(
-    f"Sucesso absoluto! Base populada com {total_viagens} viagens limpas e"
-    " validadas."
-)
+  print(
+      "Agora abra o Power BI e clique em 'Atualizar' para ver o dashboard"
+      " renovado!"
+  )
